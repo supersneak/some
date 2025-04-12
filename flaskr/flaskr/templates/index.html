@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="'ja">
+    <head>
+        <meta charset="UTF-8">
+        <title>ムムのアプリ</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css')}}">
+    </head>
+    <body>
+        <h1>mumuのお店</h1>
+        <h2>今月のジュース</h2>
+            {% if juices == [] %}
+                <p>今月のジュースはありません</p>
+            {% else %}
+            <table border ="1">
+                <tr>
+                    <th>入荷日</th>
+                    <th>タイトル</th>
+                    <th>金額</th>
+                </tr>
+                {% for juice in juices %}
+                    <tr>
+                        <td>{{ juice.arrival_day }}</td>
+                        <td>{{ juice.name }}</td>
+                        <td>{{ juice.price }}</td>
+                    </tr>
+                {% endfor %} 
+            </table>
+        {% endif %}
+        <a href="{{ url_for('form')}}">編集</a>
+    </body>
+</html>

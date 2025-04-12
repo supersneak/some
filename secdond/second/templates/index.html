@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ミス防止チェックリスト</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 id="title">ミス防止チェックリスト</h1>
+        
+        <!-- リストの作成はここ -->
+        <form method="POST" action="/create-list">
+            <input type="text" name="list_name" placeholder="新しいリスト名を入力してください">
+            <button type="submit">リストを作成</button>
+        </form>
+
+       <!--リスト選択はここで行う-->
+       <!--formのエンドポイントを決めない場合は'/'に送られる'-->
+        <form method="POST"> 
+            <!--selectはドロップダウンメニューを表す。onchangeは入力後すぐに動作するかを判定-->
+            <!--nameは属性で、送信時に送られるデータの名前を指定している。valueが送信される値-->
+            <select name="list_id" onchange="this.form.submit()"> 
+                <option value="">リストを選択</option> 
+                <!--ここからループ。「lists = List.query.all()」を使っている-->
+                {% for list in lists %} 
+                <!--optionタグのselected属性でデフォルトの選択状態にできる→更新されてもそのままになる-->
+                    <option value="{{ list.id }}" {% if selected_list and selected_list.id == list.id %}selected{% endif %}>{{ list.name }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+<!--リストを選択したときの処理-->
+{% if selected_list %}
+    <h2>{{ selected_list.name }} のアイテム</h2>
+    <!--リストの要素の作成-->
+    <form method="POST" action="/create">
+        <input type="text" name="title" placeholder="アイテムを入力してください">
+        <!-- リストIDを隠しフィールドで送信 -->
+        <input type="hidden" name="list_id" value="{{ selected_list.id }}">  
+        <button type="submit">アイテムを追加</button>
+    </form>
+    <!--リストの要素の削除-->
+    <form method="POST" action="/deletelist" >
+        <input type ="hidden" name="deletelist" value="{{selected_list.id}}">
+        <button type="submit">このリストを削除</button>
+    </form>
+
+    <!-- 中身の表示フォーム -->
+    <ul id="todo-list">
+        {% for do in dos %}
+            <li data-id="{{ do.id }}">
+                <form method="POST" action="/update" style="display:inline;">
+                    <input type="hidden" name="id" value="{{ do.id }}">
+                    <input type="hidden" name="list_id" value="{{ selected_list.id if selected_list else '' }}">  <!--  現在のリストを維持 -->
+                    <input type="checkbox" name="completed" {% if do.completed %}checked{% endif %} 
+                           onchange="this.form.submit()">  <!-- 変更時に自動で送信 -->
+                </form>
+                {{ do.title }}
+                <form method="POST" action="/del" style="display:inline;">
+                    <input type="hidden" name="id" value="{{ do.id }}">
+                    <button type="submit">削除</button>
+                </form>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+</div>
+
+<!-- ここから要素の並びかえ機能 -->
+    <script>
+        //documentは現在のHTMLファイルを表す
+        //getElememtByIdは選択すたIDを持つものの要素を受け取る　()内のもの
+        //つまり現在のHTML内のtodo-listというidを持つものの要素がelに格納される
+        const el = document.getElementById('todo-list');
+        //ここのnewはインスタンスの作成を表す（Sortable.jsのクラスから作っている）
+        const sortable = new Sortable(el, {
+            //ここが並び替えたら実行される
+            onEnd(evt) {
+                const order = [];
+                el.querySelectorAll('li').forEach((item) => {
+                    order.push(item.getAttribute('data-id'));
+                });
+
+                fetch('/reorder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ order: order })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('並べ替えが自動保存されました', data);
+                })
+                .catch(error => {
+                    console.error('エラー:', error);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+
